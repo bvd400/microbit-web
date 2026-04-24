@@ -1,11 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Hello GitHub Pages</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>micro:bit Joystick</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #f0f0f0; margin: 0; overflow: hidden; }
+        #header { padding: 20px; background: #333; color: white; }
+        #zone_joystick {
+            position: relative;
+            width: 100%;
+            height: 400px; /* ジョイスティックが動かせる範囲 */
+            background: #ddd;
+            touch-action: none;
+        }
+        .btn { padding: 15px 30px; font-size: 18px; margin: 20px; cursor: pointer; border-radius: 8px; border: none; background: #28a745; color: white; }
+        #status { font-weight: bold; color: #555; }
+    </style>
 </head>
 <body>
-    <h1>GitHub Pages 成功！</h1>
-    <p>ここを書き換えて micro:bit のアプリにしていきます。</p>
+
+<div id="header">
+    <h1>micro:bit RC</h1>
+    <button id="connect" class="btn">micro:bitに接続</button>
+    <p id="status">切断中</p>
+</div>
+
+<div id="zone_joystick"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+
+<script>
+    let uartCharacteristic;
+
+    // --- Bluetooth接続処理 ---
+    document.getElementById('connect').addEventListener('click', async () => {
+        try {
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'BBC micro:bit' }],
+                optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // UARTサービスのUUID
+            });
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+            uartCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e'); // TX（送信用）
+
+            document.getElementById('status').innerText = "接続済み！";
+            document.getElementById('status').style.color = "green";
+        } catch (error) {
+            console.error(error);
+            alert("接続に失敗しました: " + error);
+        }
+    });
+
+    // --- ジョイスティックの設定 ---
+    const options = {
+        zone: document.getElementById('zone_joystick'),
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: 'blue',
+        size: 150
+    };
+    const joystick = nipplejs.create(options);
+
+    // --- データ送信関数 ---
+    async function sendCommand(cmd) {
+        if (!uartCharacteristic) return;
+        const encoder = new TextEncoder();
+        await uartCharacteristic.writeValue(encoder.encode(cmd));
+        console.log("Sent:", cmd);
+    }
+
+    // --- ジョイスティックのイベント ---
+    joystick.on('move', (evt, data) => {
+        if (data.direction) {
+            const dir = data.direction.angle; // 'up', 'down', 'left', 'right'
+            if (dir === 'up') sendCommand('F');    // 前進 (Forward)
+            if (dir === 'down') sendCommand('B');  // 後退 (Backward)
+            if (dir === 'left') sendCommand('L');  // 左旋回
+            if (dir === 'right') sendCommand('R'); // 右旋回
+        }
+    });
+
+    joystick.on('end', () => {
+        sendCommand('S'); // 停止 (Stop)
+    });
+
+</script>
 </body>
 </html>
