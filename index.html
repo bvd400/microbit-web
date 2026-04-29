@@ -63,11 +63,14 @@
     const joystick = nipplejs.create(options);
 
     // --- データ送信関数 ---
-    async function sendCommand(cmd) {
-        if (!uartCharacteristic) return;
-        const encoder = new TextEncoder();
-        await uartCharacteristic.writeValue(encoder.encode(cmd));
-        console.log("Sent:", cmd);
+    function sendCommand(data) {
+        console.log("送信データ:", data); // これを追加
+        if (characteristic) {
+            const encoder = new TextEncoder();
+            characteristic.writeValue(encoder.encode(data))
+                .then(() => console.log("送信成功"))
+                .catch(error => console.error("送信失敗:", error));
+        }
     }
 
     // --- ジョイスティックのイベント ---
