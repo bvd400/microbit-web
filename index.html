@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>micro:bit Joystick</title>
+    <title>micro:bit RC - Stable Version</title>
     <style>
         body { text-align: center; font-family: sans-serif; background: #f0f0f0; margin: 0; overflow: hidden; }
         #header { padding: 20px; background: #333; color: white; }
@@ -15,7 +15,8 @@
             touch-action: none;
         }
         .btn { padding: 15px 30px; font-size: 18px; margin: 20px; cursor: pointer; border-radius: 8px; border: none; background: #28a745; color: white; }
-        #status { font-weight: bold; color: #555; }
+        .btn:active { background: #1e7e34; }
+        #status { font-weight: bold; color: #ccc; }
     </style>
 </head>
 <body>
@@ -23,7 +24,7 @@
 <div id="header">
     <h1>micro:bit RC</h1>
     <button id="connect" class="btn">micro:bitに接続</button>
-    <p id="status">切断中</p>
+    <p id="status">ステータス: 未接続</p>
 </div>
 
 <div id="zone_joystick"></div>
@@ -31,68 +32,88 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
 <script>
-    // 1. 変数名を uartCharacteristic で統一します
     let uartCharacteristic = null;
 
     // --- Bluetooth接続処理 ---
     document.getElementById('connect').addEventListener('click', async () => {
+        const statusEl = document.getElementById('status');
         try {
+            statusEl.innerText = "接続中...";
             const device = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: 'BBC micro:bit' }],
-                optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+                optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // UART Service
             });
+
             const server = await device.gatt.connect();
             const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-            // ここで uartCharacteristic に代入
+            
+            // 書き込み用の特性（TX Characteristic）を取得
             uartCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
 
-            document.getElementById('status').innerText = "接続済み！";
-            document.getElementById('status').style.color = "green";
+            statusEl.innerText = "ステータス: 接続済み！";
+            statusEl.style.color = "#00ff00";
+            console.log("Connected to micro:bit");
         } catch (error) {
             console.error(error);
-            alert("接続に失敗しました: " + error);
+            statusEl.innerText = "ステータス: 接続失敗";
+            statusEl.style.color = "red";
+            alert("接続エラー: " + error);
         }
     });
 
+    // --- データ送信関数 (writeValueWithoutResponseを使用) ---
+    async function sendCommand(data) {
+        if (!uartCharacteristic) return;
+
+        try {
+            const encoder = new TextEncoder();
+            const value = encoder.encode(data);
+            
+            // micro:bitのUARTは「応答なし」での書き込みを推奨しているため、こちらを優先
+            if (uartCharacteristic.properties.writeWithoutResponse) {
+                await uartCharacteristic.writeValueWithoutResponse(value);
+                console.log("送信成功 (No Response):", data);
+            } else {
+                await uartCharacteristic.writeValue(value);
+                console.log("送信成功 (With Response):", data);
+            }
+        } catch (error) {
+            console.error("送信エラー:", error);
+        }
+    }
+
     // --- ジョイスティックの設定 ---
-    const options = {
+    const joystick = nipplejs.create({
         zone: document.getElementById('zone_joystick'),
         mode: 'static',
         position: { left: '50%', top: '50%' },
         color: 'blue',
         size: 150
-    };
-    const joystick = nipplejs.create(options);
+    });
 
-    // --- データ送信関数 ---
-    // ここで使う変数名を uartCharacteristic に完全に一致させました
-    function sendCommand(data) {
-        if (uartCharacteristic) {
-            const encoder = new TextEncoder();
-            // writeValue を writeValueWithoutResponse に変更します
-            uartCharacteristic.writeValueWithoutResponse(encoder.encode(data))
-                .then(() => console.log("送信成功: " + data))
-                .catch(error => {
-                    // もし WithoutResponse が使えないブラウザの場合は従来の方式を試す
-                    console.warn("WithoutResponse失敗、通常書き込みを試行...");
-                    uartCharacteristic.writeValue(encoder.encode(data));
-                });
-        }
-    }
+    // --- 操作イベント ---
+    let lastDir = "";
 
-    // --- ジョイスティックのイベント ---
     joystick.on('move', (evt, data) => {
         if (data.direction) {
-            const dir = data.direction.angle; 
-            if (dir === 'up') sendCommand('F'); 
-            if (dir === 'down') sendCommand('B');
-            if (dir === 'left') sendCommand('L');
-            if (dir === 'right') sendCommand('R');
+            const dir = data.direction.angle; // 'up', 'down', 'left', 'right'
+            let cmd = "";
+            if (dir === 'up') cmd = 'F';
+            if (dir === 'down') cmd = 'B';
+            if (dir === 'left') cmd = 'L';
+            if (dir === 'right') cmd = 'R';
+
+            // 同じコマンドを連続で送りすぎないよう制御
+            if (cmd !== lastDir) {
+                sendCommand(cmd);
+                lastDir = cmd;
+            }
         }
     });
 
     joystick.on('end', () => {
-        sendCommand('S'); 
+        sendCommand('S');
+        lastDir = "S";
     });
 
 </script>
