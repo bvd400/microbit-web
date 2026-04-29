@@ -64,12 +64,15 @@
 
     // --- データ送信関数 ---
     function sendCommand(data) {
-        console.log("送信データ:", data); // これを追加
-        if (characteristic) {
+        console.log("送信データ:", data); 
+        // ここを characteristic から uartCharacteristic に修正しました
+        if (uartCharacteristic) {
             const encoder = new TextEncoder();
-            characteristic.writeValue(encoder.encode(data))
+            uartCharacteristic.writeValue(encoder.encode(data))
                 .then(() => console.log("送信成功"))
                 .catch(error => console.error("送信失敗:", error));
+        } else {
+            console.warn("micro:bitが接続されていません");
         }
     }
 
