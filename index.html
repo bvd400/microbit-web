@@ -67,7 +67,7 @@
 
         try {
             const encoder = new TextEncoder();
-            const value = encoder.encode(data);
+            const value = encoder.encode(data + '\n');
             
             // micro:bitのUARTは「応答なし」での書き込みを推奨しているため、こちらを優先
             if (uartCharacteristic.properties.writeWithoutResponse) {
