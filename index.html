@@ -67,14 +67,16 @@
     // --- データ送信関数 ---
     // ここで使う変数名を uartCharacteristic に完全に一致させました
     function sendCommand(data) {
-        console.log("送信データ:", data); 
         if (uartCharacteristic) {
             const encoder = new TextEncoder();
-            uartCharacteristic.writeValue(encoder.encode(data))
+            // writeValue を writeValueWithoutResponse に変更します
+            uartCharacteristic.writeValueWithoutResponse(encoder.encode(data))
                 .then(() => console.log("送信成功: " + data))
-                .catch(error => console.error("送信失敗:", error));
-        } else {
-            console.warn("micro:bitがまだ接続されていません");
+                .catch(error => {
+                    // もし WithoutResponse が使えないブラウザの場合は従来の方式を試す
+                    console.warn("WithoutResponse失敗、通常書き込みを試行...");
+                    uartCharacteristic.writeValue(encoder.encode(data));
+                });
         }
     }
 
