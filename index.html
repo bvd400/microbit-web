@@ -32,89 +32,135 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
 
 <script>
-    let uartCharacteristic = null;
+const UUID_UART_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+const UUID_TX_CHAR_CHARACTERISTIC = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+const UUID_RX_CHAR_CHARACTERISTIC = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
 
-    // --- Bluetooth接続処理 ---
-    document.getElementById('connect').addEventListener('click', async () => {
-        const statusEl = document.getElementById('status');
-        try {
-            statusEl.innerText = "接続中...";
-            const device = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: 'BBC micro:bit' }],
-                optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // UART Service
-            });
+let gatt = null
+let tx = null
+let rx = null
 
-            const server = await device.gatt.connect();
-            const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-            
-            // 書き込み用の特性（TX Characteristic）を取得
-            uartCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+// --- Bluetooth接続処理 ---
+const update = connected => {
+    const connectBtn = document.getElementById('connect')
+    const statusEl = document.getElementById('status')
+    
+    if (connected) {
+        connectBtn.textContent = '切断'
+        connectBtn.style.background = '#dc3545'
+        statusEl.innerText = "ステータス: 接続済み！";
+        statusEl.style.color = "#00ff00";
+    } else {
+        connectBtn.textContent = 'micro:bitに接続'
+        connectBtn.style.background = '#28a745'
+        statusEl.innerText = "ステータス: 未接続";
+        statusEl.style.color = "#ccc";
+    }
+}
 
-            statusEl.innerText = "ステータス: 接続済み！";
-            statusEl.style.color = "#00ff00";
-            console.log("Connected to micro:bit");
-        } catch (error) {
-            console.error(error);
+const send = text => {
+    if (!rx) return;
+    try {
+        rx.writeValue(new TextEncoder().encode(text + '\n'))
+        console.log("送信成功:", text);
+    } catch (error) {
+        console.error("送信エラー:", error);
+    }
+}
+
+document.getElementById('connect').addEventListener('click', e => {
+    if(!(navigator.bluetooth && navigator.bluetooth.requestDevice)) {
+        alert('WebBluetooth に未対応のブラウザです。')
+        return
+    }
+    
+    const connectBtn = document.getElementById('connect')
+    const statusEl = document.getElementById('status')
+    
+    if (connectBtn.textContent === 'micro:bitに接続') {
+        statusEl.innerText = "接続中...";
+        
+        navigator.bluetooth.requestDevice({
+            filters: [
+                { services: [UUID_UART_SERVICE] },
+                { namePrefix: 'BBC micro:bit' }
+            ]
+        }).then(device => {
+            gatt = device.gatt
+            return gatt.connect()
+        }).then(server =>
+            server.getPrimaryService(UUID_UART_SERVICE)
+        ).then(service =>
+            Promise.all([
+                service.getCharacteristic(UUID_TX_CHAR_CHARACTERISTIC),
+                service.getCharacteristic(UUID_RX_CHAR_CHARACTERISTIC)])
+        ).then(characteristics => {
+            tx = characteristics[0]
+            tx.startNotifications()
+            tx.addEventListener('characteristicvaluechanged', e => {
+                const text = new TextDecoder().decode(e.target.value)
+                console.log("受信データ:", text);
+                // 必要であれば受信データをUIに表示
+            })
+            rx = characteristics[1]
+            update(true)
+            console.log("Connected to micro:bit")
+        }).catch(function(err) {
+            console.error(err)
             statusEl.innerText = "ステータス: 接続失敗";
             statusEl.style.color = "red";
-            alert("接続エラー: " + error);
+            alert("接続エラー: " + err)
+        })
+    } else {
+        if (gatt) {
+            gatt.disconnect()
         }
-    });
+        update(false)
+    }
+})
 
-    // --- データ送信関数 (writeValueWithoutResponseを使用) ---
-    async function sendCommand(data) {
-        if (!uartCharacteristic) return;
+// --- ジョイスティックの設定 ---
+const joystick = nipplejs.create({
+    zone: document.getElementById('zone_joystick'),
+    mode: 'static',
+    position: { left: '50%', top: '50%' },
+    color: 'blue',
+    size: 150
+});
 
-        try {
-            const encoder = new TextEncoder();
-            const value = encoder.encode(data + '\n');
-            
-            // micro:bitのUARTは「応答なし」での書き込みを推奨しているため、こちらを優先
-            if (uartCharacteristic.properties.writeWithoutResponse) {
-                await uartCharacteristic.writeValueWithoutResponse(value);
-                console.log("送信成功 (No Response):", data);
-            } else {
-                await uartCharacteristic.writeValue(value);
-                console.log("送信成功 (With Response):", data);
-            }
-        } catch (error) {
-            console.error("送信エラー:", error);
+let lastDir = "";
+
+joystick.on('move', (evt, data) => {
+    // ジョイスティックが真ん中（原点）にあるかチェック
+    const isCenter = Math.abs(data.distance) < 0.1; // 10%未満なら真ん中と判定
+    
+    if (isCenter) {
+        // 真ん中にある場合は停止コマンドを送信
+        if (lastDir !== "S") {
+            send('S');
+            lastDir = "S";
+            console.log("ジョイスティックが真ん中");
+        }
+    } else if (data.direction) {
+        const dir = data.direction.angle; // 'up', 'down', 'left', 'right'
+        let cmd = "";
+        if (dir === 'up') cmd = 'F';
+        if (dir === 'down') cmd = 'B';
+        if (dir === 'left') cmd = 'L';
+        if (dir === 'right') cmd = 'R';
+
+        // 同じコマンドを連続で送りすぎないよう制御
+        if (cmd !== lastDir) {
+            send(cmd);
+            lastDir = cmd;
         }
     }
+});
 
-    // --- ジョイスティックの設定 ---
-    const joystick = nipplejs.create({
-        zone: document.getElementById('zone_joystick'),
-        mode: 'static',
-        position: { left: '50%', top: '50%' },
-        color: 'blue',
-        size: 150
-    });
-
-    // --- 操作イベント ---
-    let lastDir = "";
-
-    joystick.on('move', (evt, data) => {
-        if (data.direction) {
-            const dir = data.direction.angle; // 'up', 'down', 'left', 'right'
-            let cmd = "";
-            if (dir === 'up') cmd = 'F';
-            if (dir === 'down') cmd = 'B';
-            if (dir === 'left') cmd = 'L';
-            if (dir === 'right') cmd = 'R';
-
-            // 同じコマンドを連続で送りすぎないよう制御
-            if (cmd !== lastDir) {
-                sendCommand(cmd);
-                lastDir = cmd;
-            }
-        }
-    });
-
-    joystick.on('end', () => {
-        sendCommand('S');
-        lastDir = "S";
-    });
+joystick.on('end', () => {
+    send('S');
+    lastDir = "S";
+});
 
 </script>
 </body>
