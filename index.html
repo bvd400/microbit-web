@@ -84,7 +84,7 @@
         .btn:active { background: #1e7e34; }
         #status { font-weight: bold; color: #ccc; }
         #text-control { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
-        #text-input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; width: 200px; margin-right: 10px; }
+        #text-input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; width: 180px; margin-right: 10px; }
         #send-text { padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         #send-text:active { background: #0056b3; }
         #button-group { padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #ddd; display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -127,7 +127,7 @@
 </div>
 
 <div id="text-control">
-    <input type="text" id="text-input" placeholder="文字列を入力" value="">
+    <input type="text" id="text-input" placeholder="英数字を入力" value="" maxlength="16" pattern="[a-zA-Z0-9]*" title="英数字のみ入力可能です">
     <button id="send-text">送信</button>
 </div>
 
@@ -394,83 +394,39 @@ document.getElementById('send-text').addEventListener('click', () => {
     }
 });
 
+// 英数字入力制限
+document.getElementById('text-input').addEventListener('input', (e) => {
+    const value = e.target.value;
+    const alphanumericOnly = value.replace(/[^a-zA-Z0-9]/g, '');
+    if (value !== alphanumericOnly) {
+        e.target.value = alphanumericOnly;
+    }
+});
+
 // Enterキーで送信
 document.getElementById('text-input').addEventListener('keypress', (e) => {
-    });
+    if (e.key === 'Enter') {
+        document.getElementById('send-text').click();
+    }
+});
 
-    document.addEventListener('keyup', (e) => {
-        let direction = null;
-        switch(e.key) {
-            case 'ArrowUp':
-            case 'w':
-            case 'W':
-                direction = 'F';
-                break;
-            case 'ArrowDown':
-            case 's':
-            case 'S':
-                direction = 'B';
-                break;
-            case 'ArrowLeft':
-            case 'a':
-            case 'A':
-                direction = 'L';
-                break;
-            case 'ArrowRight':
-            case 'd':
-            case 'D':
-                direction = 'R';
-                break;
-            case ' ':
-                direction = 'S';
-                break;
-        }
+// --- ボタン6つのイベント処理 ---
+document.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const command = btn.dataset.command;
         
-        if (direction) {
-            e.preventDefault();
-            const btn = document.querySelector(`[data-direction="${direction}"]`);
-            if (btn) btn.classList.remove('active');
-            handleDirectionPress(direction, false);
-        }
-    });
-
-    // --- 文字列送信機能 ---
-    document.getElementById('send-text').addEventListener('click', () => {
-        const textInput = document.getElementById('text-input');
-        const text = textInput.value.trim();
-        
-        if (text) {
-            send(text);
-            console.log("文字列送信:", text);
+        if (command === '6') {
+            // 6ボタンの場合は1〜5のランダムな数字を送信
+            const randomNum = Math.floor(Math.random() * 5) + 1; // 1〜5のランダムな数字
+            send(randomNum.toString());
+            console.log("ボタン送信（ランダム）:", randomNum);
         } else {
-            console.log("文字列が空です");
+            // その他のボタンは通常通り送信
+            send(command);
+            console.log("ボタン送信:", command);
         }
     });
-
-    // Enterキーで送信
-    document.getElementById('text-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('send-text').click();
-        }
-    });
-
-    // --- ボタン6つのイベント処理 ---
-    document.querySelectorAll('.action-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const command = btn.dataset.command;
-            
-            if (command === '6') {
-                // 6ボタンの場合は1〜5のランダムな数字を送信
-                const randomNum = Math.floor(Math.random() * 5) + 1; // 1〜5のランダムな数字
-                send(randomNum.toString());
-                console.log("ボタン送信（ランダム）:", randomNum);
-            } else {
-                // その他のボタンは通常通り送信
-                send(command);
-                console.log("ボタン送信:", command);
-            }
-        });
-    });
+});
 
 </script>
 </body>
