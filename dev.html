@@ -13,7 +13,7 @@
         #zone_joystick {
             position: relative;
             width: 100%;
-            height: 400px;
+            height: 300px;
             background: #ddd;
             display: flex;
             justify-content: center;
@@ -87,6 +87,17 @@
         #text-input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; width: 200px; margin-right: 10px; }
         #send-text { padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         #send-text:active { background: #0056b3; }
+        #button-group { padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #ddd; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .action-btn { padding: 12px 20px; font-size: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s; min-width: 80px; }
+        .action-btn:active { transform: scale(0.95); }
+        .btn-1 { background: #28a745; color: white; }
+        .btn-1:active { background: #1e7e34; }
+        .btn-2 { background: #dc3545; color: white; }
+        .btn-2:active { background: #c82333; }
+        .btn-3 { background: #ffc107; color: #212529; }
+        .btn-3:active { background: #e0a800; }
+        .btn-4 { background: #6f42c1; color: white; }
+        .btn-4:active { background: #5a32a3; }
     </style>
 </head>
 <body>
@@ -113,6 +124,13 @@
 <div id="text-control">
     <input type="text" id="text-input" placeholder="文字列を入力" value="">
     <button id="send-text">送信</button>
+</div>
+
+<div id="button-group">
+    <button class="action-btn btn-1" data-command="CMD1">コマンド1</button>
+    <button class="action-btn btn-2" data-command="CMD2">コマンド2</button>
+    <button class="action-btn btn-3" data-command="CMD3">コマンド3</button>
+    <button class="action-btn btn-4" data-command="CMD4">コマンド4</button>
 </div>
 
 <script>
@@ -370,6 +388,15 @@ document.getElementById('text-input').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         document.getElementById('send-text').click();
     }
+});
+
+// --- ボタン4つのイベント処理 ---
+document.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const command = btn.dataset.command;
+        send(command);
+        console.log("ボタン送信:", command);
+    });
 });
 
 </script>
