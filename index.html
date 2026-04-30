@@ -6,20 +6,109 @@
     <title>micro:bit RC - Stable Version</title>
     <style>
         body { text-align: center; font-family: sans-serif; background: #f0f0f0; margin: 0; overflow: hidden; }
+        #version { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; z-index: 1000; }
+        #refresh { position: fixed; top: 10px; right: 10px; background: rgba(0,123,255,0.8); color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; z-index: 1000; transition: background 0.2s; }
+        #refresh:hover { background: rgba(0,123,255,1); }
         #header { padding: 20px; background: #333; color: white; }
         #zone_joystick {
             position: relative;
             width: 100%;
-            height: 400px;
+            height: 300px;
             background: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             touch-action: none;
+        }
+        .dpad-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+        .dpad-btn {
+            position: absolute;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .dpad-btn:active, .dpad-btn.active {
+            background: #0056b3;
+            transform: scale(0.95);
+        }
+        .dpad-up {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+        }
+        .dpad-down {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+        }
+        .dpad-left {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+        }
+        .dpad-right {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+        }
+        .dpad-center {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: #6c757d;
         }
         .btn { padding: 15px 30px; font-size: 18px; margin: 20px; cursor: pointer; border-radius: 8px; border: none; background: #28a745; color: white; }
         .btn:active { background: #1e7e34; }
         #status { font-weight: bold; color: #ccc; }
+        #text-control { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
+        #text-input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; width: 200px; margin-right: 10px; }
+        #send-text { padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #send-text:active { background: #0056b3; }
+        #button-group { padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #ddd; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .button-row { display: flex; justify-content: center; gap: 10px; }
+        .action-btn { padding: 12px 20px; font-size: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s; min-width: 80px; }
+        .action-btn:active { transform: scale(0.95); }
+        .btn-1 { background: #28a745; color: white; }
+        .btn-1:active { background: #1e7e34; }
+        .btn-2 { background: #dc3545; color: white; }
+        .btn-2:active { background: #c82333; }
+        .btn-3 { background: #ffc107; color: #212529; }
+        .btn-3:active { background: #e0a800; }
+        .btn-4 { background: #6f42c1; color: white; }
+        .btn-4:active { background: #5a32a3; }
+        .btn-5 { background: #17a2b8; color: white; }
+        .btn-5:active { background: #138496; }
+        .btn-6 { background: #fd7e14; color: white; }
+        .btn-6:active { background: #e85d04; }
     </style>
 </head>
 <body>
+
+<div id="version">v04301835</div>
+<button id="refresh" onclick="location.reload()">↻ 更新</button>
 
 <div id="header">
     <h1>micro:bit RC</h1>
@@ -27,9 +116,33 @@
     <p id="status">ステータス: 未接続</p>
 </div>
 
-<div id="zone_joystick"></div>
+<div id="zone_joystick">
+    <div class="dpad-container">
+        <button class="dpad-btn dpad-up" data-direction="F">↑</button>
+        <button class="dpad-btn dpad-down" data-direction="B">↓</button>
+        <button class="dpad-btn dpad-left" data-direction="L">←</button>
+        <button class="dpad-btn dpad-right" data-direction="R">→</button>
+        <button class="dpad-btn dpad-center" data-direction="S">●</button>
+    </div>
+</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+<div id="text-control">
+    <input type="text" id="text-input" placeholder="文字列を入力" value="">
+    <button id="send-text">送信</button>
+</div>
+
+<div id="button-group">
+    <div class="button-row">
+        <button class="action-btn btn-1" data-command="1">1</button>
+        <button class="action-btn btn-2" data-command="2">2</button>
+        <button class="action-btn btn-3" data-command="3">3</button>
+    </div>
+    <div class="button-row">
+        <button class="action-btn btn-4" data-command="4">4</button>
+        <button class="action-btn btn-5" data-command="5">5</button>
+        <button class="action-btn btn-6" data-command="6">6</button>
+    </div>
+</div>
 
 <script>
 const UUID_UART_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
@@ -119,48 +232,245 @@ document.getElementById('connect').addEventListener('click', e => {
     }
 })
 
-// --- ジョイスティックの設定 ---
-const joystick = nipplejs.create({
-    zone: document.getElementById('zone_joystick'),
-    mode: 'static',
-    position: { left: '50%', top: '50%' },
-    color: 'blue',
-    size: 150
+// --- 十字キーの設定 ---
+let lastDir = "";
+let activeButtons = new Set();
+
+// 十字キーのイベント処理
+function handleDirectionPress(direction, isPressed) {
+    if (isPressed) {
+        activeButtons.add(direction);
+    } else {
+        activeButtons.delete(direction);
+    }
+    
+    let currentCmd = "S"; // デフォルトは停止
+    
+    if (activeButtons.size > 0) {
+        // 優先順位: 上 > 下 > 左 > 右
+        if (activeButtons.has('F')) currentCmd = 'F';
+        else if (activeButtons.has('B')) currentCmd = 'B';
+        else if (activeButtons.has('L')) currentCmd = 'L';
+        else if (activeButtons.has('R')) currentCmd = 'R';
+    }
+    
+    if (currentCmd !== lastDir) {
+        send(currentCmd);
+        lastDir = currentCmd;
+        console.log("コマンド送信:", currentCmd);
+    }
+}
+
+// マウスイベント
+document.querySelectorAll('.dpad-btn').forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const direction = btn.dataset.direction;
+        btn.classList.add('active');
+        handleDirectionPress(direction, true);
+    });
+    
+    btn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        const direction = btn.dataset.direction;
+        btn.classList.remove('active');
+        handleDirectionPress(direction, false);
+    });
+    
+    btn.addEventListener('mouseleave', (e) => {
+        const direction = btn.dataset.direction;
+        btn.classList.remove('active');
+        handleDirectionPress(direction, false);
+    });
 });
 
-let lastDir = "";
-
-joystick.on('move', (evt, data) => {
-    // ジョイスティックが真ん中（原点）にあるかチェック
-    const isCenter = Math.abs(data.distance) < 0.1; // 10%未満なら真ん中と判定
+// タッチイベント
+document.querySelectorAll('.dpad-btn').forEach(btn => {
+    btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const direction = btn.dataset.direction;
+        btn.classList.add('active');
+        handleDirectionPress(direction, true);
+    });
     
-    if (isCenter) {
-        // 真ん中にある場合は停止コマンドを送信
-        if (lastDir !== "S") {
-            send('S');
-            lastDir = "S";
-            console.log("ジョイスティックが真ん中");
-        }
-    } else if (data.direction) {
-        const dir = data.direction.angle; // 'up', 'down', 'left', 'right'
-        let cmd = "";
-        if (dir === 'up') cmd = 'F';
-        if (dir === 'down') cmd = 'B';
-        if (dir === 'left') cmd = 'L';
-        if (dir === 'right') cmd = 'R';
+    btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        const direction = btn.dataset.direction;
+        btn.classList.remove('active');
+        handleDirectionPress(direction, false);
+    });
+    
+    btn.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        const direction = btn.dataset.direction;
+        btn.classList.remove('active');
+        handleDirectionPress(direction, false);
+    });
+});
 
-        // 同じコマンドを連続で送りすぎないよう制御
-        if (cmd !== lastDir) {
-            send(cmd);
-            lastDir = cmd;
-        }
+// キーボードイベント
+document.addEventListener('keydown', (e) => {
+    let direction = null;
+    switch(e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+            direction = 'F';
+            break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+            direction = 'B';
+            break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+            direction = 'L';
+            break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+            direction = 'R';
+            break;
+        case ' ':
+            direction = 'S';
+            break;
+    }
+    
+    if (direction) {
+        e.preventDefault();
+        const btn = document.querySelector(`[data-direction="${direction}"]`);
+        if (btn) btn.classList.add('active');
+        handleDirectionPress(direction, true);
     }
 });
 
-joystick.on('end', () => {
-    send('S');
-    lastDir = "S";
+document.addEventListener('keyup', (e) => {
+    let direction = null;
+    switch(e.key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+            direction = 'F';
+            break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+            direction = 'B';
+            break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+            direction = 'L';
+            break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+            direction = 'R';
+            break;
+        case ' ':
+            direction = 'S';
+            break;
+    }
+    
+    if (direction) {
+        e.preventDefault();
+        const btn = document.querySelector(`[data-direction="${direction}"]`);
+        if (btn) btn.classList.remove('active');
+        handleDirectionPress(direction, false);
+    }
 });
+
+// --- 文字列送信機能 ---
+document.getElementById('send-text').addEventListener('click', () => {
+    const textInput = document.getElementById('text-input');
+    const text = textInput.value.trim();
+    
+    if (text) {
+        send(text);
+        console.log("文字列送信:", text);
+    } else {
+        console.log("文字列が空です");
+    }
+});
+
+// Enterキーで送信
+document.getElementById('text-input').addEventListener('keypress', (e) => {
+    });
+
+    document.addEventListener('keyup', (e) => {
+        let direction = null;
+        switch(e.key) {
+            case 'ArrowUp':
+            case 'w':
+            case 'W':
+                direction = 'F';
+                break;
+            case 'ArrowDown':
+            case 's':
+            case 'S':
+                direction = 'B';
+                break;
+            case 'ArrowLeft':
+            case 'a':
+            case 'A':
+                direction = 'L';
+                break;
+            case 'ArrowRight':
+            case 'd':
+            case 'D':
+                direction = 'R';
+                break;
+            case ' ':
+                direction = 'S';
+                break;
+        }
+        
+        if (direction) {
+            e.preventDefault();
+            const btn = document.querySelector(`[data-direction="${direction}"]`);
+            if (btn) btn.classList.remove('active');
+            handleDirectionPress(direction, false);
+        }
+    });
+
+    // --- 文字列送信機能 ---
+    document.getElementById('send-text').addEventListener('click', () => {
+        const textInput = document.getElementById('text-input');
+        const text = textInput.value.trim();
+        
+        if (text) {
+            send(text);
+            console.log("文字列送信:", text);
+        } else {
+            console.log("文字列が空です");
+        }
+    });
+
+    // Enterキーで送信
+    document.getElementById('text-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('send-text').click();
+        }
+    });
+
+    // --- ボタン6つのイベント処理 ---
+    document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const command = btn.dataset.command;
+            
+            if (command === '6') {
+                // 6ボタンの場合は1〜5のランダムな数字を送信
+                const randomNum = Math.floor(Math.random() * 5) + 1; // 1〜5のランダムな数字
+                send(randomNum.toString());
+                console.log("ボタン送信（ランダム）:", randomNum);
+            } else {
+                // その他のボタンは通常通り送信
+                send(command);
+                console.log("ボタン送信:", command);
+            }
+        });
+    });
 
 </script>
 </body>
