@@ -133,14 +133,14 @@
 
 <div id="button-group">
     <div class="button-row">
-        <button class="action-btn btn-1" data-command="CMD1">コマンド1</button>
-        <button class="action-btn btn-2" data-command="CMD2">コマンド2</button>
-        <button class="action-btn btn-3" data-command="CMD3">コマンド3</button>
+        <button class="action-btn btn-1" data-command="1">1</button>
+        <button class="action-btn btn-2" data-command="2">2</button>
+        <button class="action-btn btn-3" data-command="3">3</button>
     </div>
     <div class="button-row">
-        <button class="action-btn btn-4" data-command="CMD4">コマンド4</button>
-        <button class="action-btn btn-5" data-command="CMD5">コマンド5</button>
-        <button class="action-btn btn-6" data-command="CMD6">コマンド6</button>
+        <button class="action-btn btn-4" data-command="4">4</button>
+        <button class="action-btn btn-5" data-command="5">5</button>
+        <button class="action-btn btn-6" data-command="6">6</button>
     </div>
 </div>
 
@@ -396,19 +396,81 @@ document.getElementById('send-text').addEventListener('click', () => {
 
 // Enterキーで送信
 document.getElementById('text-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        document.getElementById('send-text').click();
-    }
-});
-
-// --- ボタン4つのイベント処理 ---
-document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const command = btn.dataset.command;
-        send(command);
-        console.log("ボタン送信:", command);
     });
-});
+
+    document.addEventListener('keyup', (e) => {
+        let direction = null;
+        switch(e.key) {
+            case 'ArrowUp':
+            case 'w':
+            case 'W':
+                direction = 'F';
+                break;
+            case 'ArrowDown':
+            case 's':
+            case 'S':
+                direction = 'B';
+                break;
+            case 'ArrowLeft':
+            case 'a':
+            case 'A':
+                direction = 'L';
+                break;
+            case 'ArrowRight':
+            case 'd':
+            case 'D':
+                direction = 'R';
+                break;
+            case ' ':
+                direction = 'S';
+                break;
+        }
+        
+        if (direction) {
+            e.preventDefault();
+            const btn = document.querySelector(`[data-direction="${direction}"]`);
+            if (btn) btn.classList.remove('active');
+            handleDirectionPress(direction, false);
+        }
+    });
+
+    // --- 文字列送信機能 ---
+    document.getElementById('send-text').addEventListener('click', () => {
+        const textInput = document.getElementById('text-input');
+        const text = textInput.value.trim();
+        
+        if (text) {
+            send(text);
+            console.log("文字列送信:", text);
+        } else {
+            console.log("文字列が空です");
+        }
+    });
+
+    // Enterキーで送信
+    document.getElementById('text-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('send-text').click();
+        }
+    });
+
+    // --- ボタン6つのイベント処理 ---
+    document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const command = btn.dataset.command;
+            
+            if (command === '6') {
+                // 6ボタンの場合は1〜5のランダムな数字を送信
+                const randomNum = Math.floor(Math.random() * 5) + 1; // 1〜5のランダムな数字
+                send(randomNum.toString());
+                console.log("ボタン送信（ランダム）:", randomNum);
+            } else {
+                // その他のボタンは通常通り送信
+                send(command);
+                console.log("ボタン送信:", command);
+            }
+        });
+    });
 
 </script>
 </body>
