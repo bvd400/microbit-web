@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>micro:bit RC - Stable Version</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; background: #f0f0f0; margin: 0; overflow: hidden; }
+        #header { padding: 20px; background: #333; color: white; }
+        #zone_joystick {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #ddd;
+            touch-action: none;
+        }
+        .btn { padding: 15px 30px; font-size: 18px; margin: 20px; cursor: pointer; border-radius: 8px; border: none; background: #28a745; color: white; }
+        .btn:active { background: #1e7e34; }
+        #status { font-weight: bold; color: #ccc; }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <h1>micro:bit RC</h1>
+    <button id="connect" class="btn">micro:bitに接続</button>
+    <p id="status">ステータス: 未接続</p>
+</div>
+
+<div id="zone_joystick"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+
+<script>
+    let uartCharacteristic = null;
+
+    // --- Bluetooth接続処理 ---
+    document.getElementById('connect').addEventListener('click', async () => {
+        const statusEl = document.getElementById('status');
+        try {
+            statusEl.innerText = "接続中...";
+            const device = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'BBC micro:bit' }],
+                optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // UART Service
+            });
+
+            const server = await device.gatt.connect();
+            const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+            
+            // 書き込み用の特性（TX Characteristic）を取得
+            uartCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+
+            statusEl.innerText = "ステータス: 接続済み！";
+            statusEl.style.color = "#00ff00";
+            console.log("Connected to micro:bit");
+        } catch (error) {
+            console.error(error);
+            statusEl.innerText = "ステータス: 接続失敗";
+            statusEl.style.color = "red";
+            alert("接続エラー: " + error);
+        }
+    });
+
+    // --- データ送信関数 (writeValueWithoutResponseを使用) ---
+    async function sendCommand(data) {
+        if (!uartCharacteristic) return;
+
+        try {
+            const encoder = new TextEncoder();
+            const value = encoder.encode(data + '\n');
+            
+            // micro:bitのUARTは「応答なし」での書き込みを推奨しているため、こちらを優先
+            if (uartCharacteristic.properties.writeWithoutResponse) {
+                await uartCharacteristic.writeValueWithoutResponse(value);
+                console.log("送信成功 (No Response):", data);
+            } else {
+                await uartCharacteristic.writeValue(value);
+                console.log("送信成功 (With Response):", data);
+            }
+        } catch (error) {
+            console.error("送信エラー:", error);
+        }
+    }
+
+    // --- ジョイスティックの設定 ---
+    const joystick = nipplejs.create({
+        zone: document.getElementById('zone_joystick'),
+        mode: 'static',
+        position: { left: '50%', top: '50%' },
+        color: 'blue',
+        size: 150
+    });
+
+    // --- 操作イベント ---
+    let lastDir = "";
+
+    joystick.on('move', (evt, data) => {
+        if (data.direction) {
+            const dir = data.direction.angle; // 'up', 'down', 'left', 'right'
+            let cmd = "";
+            if (dir === 'up') cmd = 'F';
+            if (dir === 'down') cmd = 'B';
+            if (dir === 'left') cmd = 'L';
+            if (dir === 'right') cmd = 'R';
+
+            // 同じコマンドを連続で送りすぎないよう制御
+            if (cmd !== lastDir) {
+                sendCommand(cmd);
+                lastDir = cmd;
+            }
+        }
+    });
+
+    joystick.on('end', () => {
+        sendCommand('S');
+        lastDir = "S";
+    });
+
+</script>
+</body>
+</html>
