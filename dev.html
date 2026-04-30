@@ -7,6 +7,8 @@
     <style>
         body { text-align: center; font-family: sans-serif; background: #f0f0f0; margin: 0; overflow: hidden; }
         #version { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; z-index: 1000; }
+        #refresh { position: fixed; top: 10px; right: 10px; background: rgba(0,123,255,0.8); color: white; padding: 8px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; z-index: 1000; transition: background 0.2s; }
+        #refresh:hover { background: rgba(0,123,255,1); }
         #header { padding: 20px; background: #333; color: white; }
         #zone_joystick {
             position: relative;
@@ -81,11 +83,16 @@
         .btn { padding: 15px 30px; font-size: 18px; margin: 20px; cursor: pointer; border-radius: 8px; border: none; background: #28a745; color: white; }
         .btn:active { background: #1e7e34; }
         #status { font-weight: bold; color: #ccc; }
+        #text-control { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; }
+        #text-input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; width: 200px; margin-right: 10px; }
+        #send-text { padding: 10px 20px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        #send-text:active { background: #0056b3; }
     </style>
 </head>
 <body>
 
 <div id="version">v04301834</div>
+<button id="refresh" onclick="location.reload()">↻ 更新</button>
 
 <div id="header">
     <h1>micro:bit RC</h1>
@@ -101,6 +108,11 @@
         <button class="dpad-btn dpad-right" data-direction="R">→</button>
         <button class="dpad-btn dpad-center" data-direction="S">●</button>
     </div>
+</div>
+
+<div id="text-control">
+    <input type="text" id="text-input" placeholder="文字列を入力" value="">
+    <button id="send-text">送信</button>
 </div>
 
 <script>
@@ -337,6 +349,26 @@ document.addEventListener('keyup', (e) => {
         const btn = document.querySelector(`[data-direction="${direction}"]`);
         if (btn) btn.classList.remove('active');
         handleDirectionPress(direction, false);
+    }
+});
+
+// --- 文字列送信機能 ---
+document.getElementById('send-text').addEventListener('click', () => {
+    const textInput = document.getElementById('text-input');
+    const text = textInput.value.trim();
+    
+    if (text) {
+        send(text);
+        console.log("文字列送信:", text);
+    } else {
+        console.log("文字列が空です");
+    }
+});
+
+// Enterキーで送信
+document.getElementById('text-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        document.getElementById('send-text').click();
     }
 });
 
