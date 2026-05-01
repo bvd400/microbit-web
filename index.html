@@ -127,7 +127,7 @@
 </div>
 
 <div id="text-control">
-    <input type="text" id="text-input" placeholder="A-Z 0-9 スペース !?+-=" value="" maxlength="16" pattern="[A-Z0-9 !?+\-=]*" title="A-Z、0-9、スペース、! ? + - = のみ入力可能です">
+    <input type="text" id="text-input" placeholder="A-Z a-z 0-9 スペース !?+-=" value="" maxlength="16" pattern="[A-Za-z0-9 !?+\-=]*" title="A-Z、a-z、0-9、スペース、! ? + - = のみ入力可能です">
     <button id="send-text">送信</button>
 </div>
 
@@ -397,7 +397,7 @@ document.getElementById('send-text').addEventListener('click', () => {
 // 入力制限
 document.getElementById('text-input').addEventListener('input', (e) => {
     const value = e.target.value;
-    const allowedOnly = value.replace(/[^A-Z0-9 !?+\-=]/g, '');
+    const allowedOnly = value.replace(/[^A-Za-z0-9 !?+\-=]/g, '');
     if (value !== allowedOnly) {
         e.target.value = allowedOnly;
     }
