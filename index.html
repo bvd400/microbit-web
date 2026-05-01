@@ -127,7 +127,7 @@
 </div>
 
 <div id="text-control">
-    <input type="text" id="text-input" placeholder="英数字を入力" value="" maxlength="16" pattern="[a-zA-Z0-9]*" title="英数字のみ入力可能です">
+    <input type="text" id="text-input" placeholder="A-Z 0-9 スペース !?+-=" value="" maxlength="16" pattern="[A-Z0-9 !?+\-=]*" title="A-Z、0-9、スペース、! ? + - = のみ入力可能です">
     <button id="send-text">送信</button>
 </div>
 
@@ -394,12 +394,12 @@ document.getElementById('send-text').addEventListener('click', () => {
     }
 });
 
-// 英数字入力制限
+// 入力制限
 document.getElementById('text-input').addEventListener('input', (e) => {
     const value = e.target.value;
-    const alphanumericOnly = value.replace(/[^a-zA-Z0-9]/g, '');
-    if (value !== alphanumericOnly) {
-        e.target.value = alphanumericOnly;
+    const allowedOnly = value.replace(/[^A-Z0-9 !?+\-=]/g, '');
+    if (value !== allowedOnly) {
+        e.target.value = allowedOnly;
     }
 });
 
